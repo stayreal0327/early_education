@@ -14,6 +14,7 @@ import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
+import DB from '../db/db';
 
 class AppUpdater {
   constructor() {
@@ -24,11 +25,36 @@ class AppUpdater {
 }
 
 let mainWindow: BrowserWindow | null = null;
+let db = null;
+
+function dataDeal(objects) {
+  for (let i = 0; i < objects.length; i+=1) {
+    console.log(objects[i]);
+  }
+}
 
 ipcMain.on('ipc-example', async (event, arg) => {
   const msgTemplate = (pingPong: string) => `IPC test: ${pingPong}`;
   console.log(msgTemplate(arg));
   event.reply('ipc-example', msgTemplate('pong'));
+
+  // for test
+  const createTileTableSql =
+    'create table if not exists tiles(level INTEGER, column INTEGER, row INTEGER, content BLOB);';
+  db.createTable(createTileTableSql);
+
+  const tileData = [
+    [1, 10, 10],
+    [1, 11, 11],
+    [1, 10, 9],
+    [1, 11, 9],
+  ];
+  const insertTileSql = 'insert into tiles(level, column, row) values(?, ?, ?)';
+  db.insertData(insertTileSql, tileData);
+
+  const querySql =
+    'select * from tiles where level = 1 and column >= 10 and column <= 11 and row >= 10 and row <=11';
+  db.queryData(querySql, dataDeal);
 });
 
 if (process.env.NODE_ENV === 'production') {
@@ -133,5 +159,9 @@ app
       // dock icon is clicked and there are no other windows open.
       if (mainWindow === null) createWindow();
     });
+
+    // init db
+    db = new DB('db/test2.db');
+    db.open();
   })
   .catch(console.log);

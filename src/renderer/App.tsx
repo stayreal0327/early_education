@@ -1,10 +1,27 @@
+import { useState } from 'react';
 import ActivityList from 'components/ActivityList';
 import { MenuOutlined } from '@ant-design/icons';
 import './App.css';
 import Functional from 'components/Functional';
 import Content from 'components/Content';
+import useIpcRenderer from 'hooks/useIpcRenderer';
+import { IpcRendererEvent } from 'electron';
+import BookList from 'components/BookList';
 
 function App() {
+  const [books, setBooks] = useState([]);
+
+  const onAllBooks = (event: IpcRendererEvent, value: any) => {
+    console.log(`onAllBooks:${JSON.stringify(value)}`);
+
+    const newBooks = [...value];
+    setBooks(newBooks);
+  };
+
+  useIpcRenderer({
+    all_books: onAllBooks,
+  });
+
   const activities = [
     {
       key: '1',
@@ -16,8 +33,8 @@ function App() {
   const contents = [
     {
       key: '1',
-      label: 'Content',
-      children: 'TEST Content',
+      label: 'Books',
+      children: <BookList books={books} />,
     },
   ];
 

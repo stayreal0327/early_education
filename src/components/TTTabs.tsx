@@ -4,7 +4,7 @@ import { Tabs } from 'antd';
 import StickyBox from 'react-sticky-box';
 
 function TTTabs({ items, className, tabChange = null, tabPosition }) {
-  if(tabPosition === 'bottom') {
+  if (tabPosition === 'bottom') {
     tabPosition = 'top';
   }
   const renderTabBar = (props: any, DefaultTabBar: any) => {

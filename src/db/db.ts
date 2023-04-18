@@ -33,16 +33,16 @@ export default class DB {
     });
   }
 
-  queryData(sql: string, callback) {
+  queryData(sql: string, callback: (err, rows) => {}) {
     this.db.all(sql, (err: any, rows: any[]) => {
-      if (err != null) {
-        this.printError(err);
-        return;
-      }
+      // if (err != null) {
+      //   this.printError(err);
+      //   return;
+      // }
 
       /// deal query data.
       if (callback) {
-        callback(rows);
+        callback(err, rows);
       }
     });
   }

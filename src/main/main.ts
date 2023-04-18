@@ -14,7 +14,7 @@ import { autoUpdater } from 'electron-updater';
 import log from 'electron-log';
 import MenuBuilder from './menu';
 import { resolveHtmlPath } from './util';
-import DB from '../db/db';
+import Book from '../base/book';
 
 class AppUpdater {
   constructor() {
@@ -24,37 +24,26 @@ class AppUpdater {
   }
 }
 
-let mainWindow: BrowserWindow | null = null;
-let db = null;
-
-function dataDeal(objects) {
-  for (let i = 0; i < objects.length; i+=1) {
-    console.log(objects[i]);
-  }
-}
+global.mainWindowId = null;
+// let mainWindow: BrowserWindow | null = null;
+let bookListener = {
+  onAllBooks:(books) => {
+    const { mainWindowId } = global;
+    if (mainWindowId) {
+      const mainWindow = BrowserWindow.fromId(mainWindowId);
+      if (mainWindow) {
+        mainWindow.webContents.send('all_books', books);
+      }
+    }
+  },
+};
 
 ipcMain.on('ipc-example', async (event, arg) => {
   const msgTemplate = (pingPong: string) => `IPC test: ${pingPong}`;
   console.log(msgTemplate(arg));
   event.reply('ipc-example', msgTemplate('pong'));
-
-  // for test
-  const createTileTableSql =
-    'create table if not exists tiles(level INTEGER, column INTEGER, row INTEGER, content BLOB);';
-  db.createTable(createTileTableSql);
-
-  const tileData = [
-    [1, 10, 10],
-    [1, 11, 11],
-    [1, 10, 9],
-    [1, 11, 9],
-  ];
-  const insertTileSql = 'insert into tiles(level, column, row) values(?, ?, ?)';
-  db.insertData(insertTileSql, tileData);
-
-  const querySql =
-    'select * from tiles where level = 1 and column >= 10 and column <= 11 and row >= 10 and row <=11';
-  db.queryData(querySql, dataDeal);
+  // console.log("call Book.init");
+  // Book.init(bookListener);
 });
 
 if (process.env.NODE_ENV === 'production') {
@@ -95,7 +84,7 @@ const createWindow = async () => {
     return path.join(RESOURCES_PATH, ...paths);
   };
 
-  mainWindow = new BrowserWindow({
+  let mainWindow = new BrowserWindow({
     show: false,
     width: 1024,
     height: 728,
@@ -106,6 +95,7 @@ const createWindow = async () => {
         : path.join(__dirname, '../../.erb/dll/preload.js'),
     },
   });
+  global.mainWindowId = mainWindow.id;
 
   mainWindow.loadURL(resolveHtmlPath('index.html'));
 
@@ -120,7 +110,12 @@ const createWindow = async () => {
     }
   });
 
+  mainWindow.on('show', () => {
+    Book.init(bookListener);
+  });
+
   mainWindow.on('closed', () => {
+    global.mainWindowId = null;
     mainWindow = null;
   });
 
@@ -150,6 +145,10 @@ app.on('window-all-closed', () => {
   }
 });
 
+app.on('will-quit', () => {
+  Book.uninit();
+});
+
 app
   .whenReady()
   .then(() => {
@@ -157,11 +156,8 @@ app
     app.on('activate', () => {
       // On macOS it's common to re-create a window in the app when the
       // dock icon is clicked and there are no other windows open.
-      if (mainWindow === null) createWindow();
+      if (BrowserWindow.getAllWindows().length === 0) createWindow();
     });
-
-    // init db
-    db = new DB('db/test2.db');
-    db.open();
+    // Book.init(bookListener);
   })
   .catch(console.log);
